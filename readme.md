@@ -1,10 +1,11 @@
 ﻿# Sql Batch Insert Performance
 
-A SQL batch insert performance benchmark in .NET C# that:
+A SQL batch insert benchmark in .NET C# that:
 
 - Uses `ExecuteNonQuery()` and placeholder parameters (named or positional) to insert single row or multi-row batches
-- Varies the number of columns from 1 to 2048, and number of rows in each batch from 1 to 1000
-- Each statement uses SQL-92 syntax:
+- Varies the number of columns from 1 to 1024, and number of rows in each batch from 1 to 1000
+- Inserts into an un-indexed table
+- Uses SQL-92 syntax:
 
   ```
   INSERT INTO tablename (column-a, [column-b, ...])
@@ -30,7 +31,7 @@ A SQL batch insert performance benchmark in .NET C# that:
 
 # Conclusions
 
-I've tested with .NET5.0 and a local SQL Server 2019 database.
+I've tested with Windows 10, .NET5.0 and a local SQL Server 2019 database.
 
 In the tests below I find a quite significant issue with performance (measured as **inserted 
 parameters per second**) with the `Microsoft.Data.SqlClient` and `System.Data.SqlClient` providers. 
@@ -76,6 +77,9 @@ you get better performance via table valued parameters or bulk inserts.
 ## Test Results
 
 ``` ini
+Microsoft.Data.SqlClient Version="2.1.1"
+System.Data.Odbc Version="5.0.0"
+System.Data.SqlClient Version="4.8.2"
 
 BenchmarkDotNet=v0.12.1, OS=Windows 10.0.19042
 Intel Core i7-4770K CPU 3.50GHz (Haswell), 1 CPU, 4 logical and 4 physical cores
