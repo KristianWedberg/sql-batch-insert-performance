@@ -22,8 +22,10 @@ A SQL batch insert performance benchmark in .NET C# that:
     - Note: It's quite easy to extend the benchmark to other providers and databases
   - If desired, define ASYNC, PREPARE, and/or TRANSACTION to also test those (I saw no 
     significant difference)
-  - If needed, increase/decrease the `_scaleNumberOfStatements` constant to increase/decrease run times
-- Run. On my old desktop this ran in 23 minutes. Switch from `Job.ShortRun` to `Job.Dry` to reduce runtimes.
+  - If needed, increase/decrease the `_scaleNumberOfStatements` constant to increase/decrease the run time
+    of each test case
+- Run. On my old desktop this ran in 23 minutes. Switch from `Job.ShortRun` to `Job.Dry` to reduce overall 
+  run times.
 
 
 # Conclusions
@@ -52,7 +54,7 @@ In summary:
     with 2048 parameters being up to 7 times slower than with 128 parameters
   - With 128 or more parameters, the SQL Server process _might_ be bottlenecked on CPU 
     (it consumes just over one core of CPU, the same as the ODBC run, despite inserting 
-    rows 25 times slower than ODBC)
+    rows up to 25 times slower than ODBC)
   - It also affects single row inserts (i.e. no batch), where `M.D.SqlClient` and `S.D.SqlClient` 
     are 3.5 times slower at 1024 parameters vs. peak performance at 128 parameters
   - Using `async` (with `ExecuteNonQueryAsync()`), using `IDbCommand.Prepare()`, and/or wrapping
@@ -84,11 +86,12 @@ Intel Core i7-4770K CPU 3.50GHz (Haswell), 1 CPU, 4 logical and 4 physical cores
 Job=ShortRun  IterationCount=3  LaunchCount=1  
 WarmupCount=3  
 
-Note: RPS=Rows Per Statement, CPR=Columns Per Row, NOS=Number Of Statements.
+Note: Microsoft=`Microsoft.Data.SqlClient`, Odbc=`System.Data.Odbc`, System=`System.Data.SqlClient`,
+RPS=Rows Per Statement, CPR=Columns Per Row, NOS=Number Of Statements.
 
 ```
 | provider | RPS | CPR | NOS |      Mean |      Error |    StdDev | Throughput [params/s] | Throughput [rows/s] |
-|-------------- |----------------- |-------------- |------------------- |----------:|-----------:|----------:|----------------------:|--------------------:|
+|-------------- |----:|---:|---:|----------:|-----------:|----------:|----------------------:|--------------------:|
 | **Microsoft** |                **1** |             **1** |                **800** | **158.81 ms** |  **37.250 ms** |  **2.042 ms** |                  **5037** |                **5037** |
 | **Microsoft** |                **1** |             **2** |               **1049** | **206.62 ms** |  **23.500 ms** |  **1.288 ms** |                 **10154** |                **5077** |
 | **Microsoft** |                **1** |             **4** |               **1000** | **200.54 ms** |  **25.796 ms** |  **1.414 ms** |                 **19947** |                **4987** |
