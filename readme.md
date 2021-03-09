@@ -85,11 +85,11 @@ Intel Core i7-4770K CPU 3.50GHz (Haswell), 1 CPU, 4 logical and 4 physical cores
 
 Job=ShortRun  IterationCount=3  LaunchCount=1  
 WarmupCount=3  
+```
 
 Note: Microsoft=`Microsoft.Data.SqlClient`, Odbc=`System.Data.Odbc`, System=`System.Data.SqlClient`,
 RPS=Rows Per Statement, CPR=Columns Per Row, NOS=Number Of Statements.
 
-```
 | provider | RPS | CPR | NOS |      Mean |      Error |    StdDev | Throughput [params/s] | Throughput [rows/s] |
 |-------------- |----:|---:|---:|----------:|-----------:|----------:|----------------------:|--------------------:|
 | **Microsoft** |                **1** |             **1** |                **800** | **158.81 ms** |  **37.250 ms** |  **2.042 ms** |                  **5037** |                **5037** |
