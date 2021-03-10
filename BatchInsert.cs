@@ -1,4 +1,5 @@
 ﻿//#define ASYNC // Async makes no material difference (just slightly slower overall)
+#define BOXEDINTVALUES // Define this to avoid boxing an int for every value
 //#define PREPARE // Prepare makes no difference
 //#define TRANSACTION // Explicit transaction makes no difference
 
@@ -17,6 +18,7 @@ using System.Threading.Tasks;
 using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Columns;
 using System.Data;
+using System.Linq;
 
 namespace SqlBatchInsertPerformance
 {
@@ -32,11 +34,25 @@ namespace SqlBatchInsertPerformance
     public partial class BatchInsert
     {
         // Edit these for your environment
+        private readonly int[] _rowsPerStatements = new[] { // Max 1000
+            1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000
+            //32 // Single test value
+        };
+        private readonly int[] _columnsPerRows = new[] { // Max 1024
+            1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024
+            //64 // Single test value
+        };
         private const int _scaleNumberOfStatements = 200;
-        private const string _odbcCS = "Driver={ODBC Driver 17 for SQL Server};database=MyDatabase;server=MyServer;Uid=MyUser;Pwd=MyPassword";
-        private const string _sqlClientCS = "database=MyDatabase;server=MyServer;Uid=MyUser;Pwd=MyPassword";
+        private const string _odbcCS =
+            "Driver={ODBC Driver 17 for SQL Server};database=MyDatabase;server=MyServer;Uid=MyUser;Pwd=MyPassword";
+        private const string _sqlClientCS = 
+        	"database=MyDatabase;server=MyServer;Uid=MyUser;Pwd=MyPassword";
 
         private readonly List<Argument> _arguments = new();
+
+#if BOXEDINTVALUES
+        private readonly object[] _boxedIntValues = Enumerable.Range(0, 1024).Select(i => (object)i).ToArray();
+#endif
 
         private static string GetParameterName(int r, int c) => $"@R{r}_C{c}";
 
@@ -63,12 +79,10 @@ namespace SqlBatchInsertPerformance
                 , ProviderAsync.MicrosoftAsync
 #endif
             })
-                foreach (var rowsPerStatement in new[] { // Max 1000
-                        1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000
-                    })
-                    foreach (var columnsPerRow in new[] { // Max 1024
-                        1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024
-                    })
+            {
+                foreach (var rowsPerStatement in _rowsPerStatements)
+                {
+                    foreach (var columnsPerRow in _columnsPerRows)
                     {
                         var parametersInBatch = rowsPerStatement * columnsPerRow;
                         // SqlClient: Max 1000 row values in INSERT, max 2100 parameters, max 1024 columns
@@ -83,6 +97,8 @@ namespace SqlBatchInsertPerformance
                         _arguments.Add(a);
                         yield return new object[] { pa, rowsPerStatement, columnsPerRow, numberOfStatements, a };
                     }
+                }
+            }
         }
 
         [ArgumentsSource(nameof(GetArguments))]
@@ -117,7 +133,12 @@ namespace SqlBatchInsertPerformance
                 for (int r = 0; r < rowsPerStatement; r++)
                     for (int c = 0; c < columnsPerRow; c++)
                     {
-                        int value = i * columnsPerRow * rowsPerStatement + r * rowsPerStatement + c;
+                    var value =
+#if BOXEDINTVALUES
+                        _boxedIntValues[c];
+#else
+                        i * columnsPerRow * rowsPerStatement + r * rowsPerStatement + c;
+#endif
                         parameters[r * columnsPerRow + c].Value = value;
                     }
 

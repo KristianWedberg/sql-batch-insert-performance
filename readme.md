@@ -1,6 +1,10 @@
-﻿# Sql Batch Insert Performance
+﻿# SQL Batch Insert Benchmark
 
-A SQL batch insert benchmark in .NET C# that:
+A SQL batch insert benchmark in .NET C# that highlights a performance issue with the
+`Microsoft.Data.SqlClient` and `System.Data.SqlClient` providers. The issue has also
+been raised as https://github.com/dotnet/SqlClient/issues/974
+
+The benchmark:
 
 - Uses `ExecuteNonQuery()` and placeholder parameters (named or positional) to insert single row or multi-row batches
 - Varies the number of columns from 1 to 1024, and number of rows in each batch from 1 to 1000
@@ -18,11 +22,12 @@ A SQL batch insert benchmark in .NET C# that:
   ## Instructions
 
 - At top of `BatchInsert.cs`:
+  - If desired, define ASYNC, BOXEDINTVALUES, PREPARE, and/or TRANSACTION to also test those (I saw no 
+    significant difference)
+  - If desired, change `_rowsPerStatements` and `_columnsPerRows` to only run some test cases
   - Set connection strings `_odbcCS` (for the `System.Data.Odbc` provider) and `_sqlClientCS`
     (for the `Microsoft.Data.SqlClient` and `System.Data.SqlClient` providers)
     - Note: It's quite easy to extend the benchmark to other providers and databases
-  - If desired, define ASYNC, PREPARE, and/or TRANSACTION to also test those (I saw no 
-    significant difference)
   - If needed, increase/decrease the `_scaleNumberOfStatements` constant to increase/decrease the run time
     of each test case
 - Run. On my old desktop this ran in 23 minutes. Switch from `Job.ShortRun` to `Job.Dry` to reduce overall 
