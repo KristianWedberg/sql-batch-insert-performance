@@ -5,6 +5,7 @@ using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Reports;
 using BenchmarkDotNet.Running;
 using Perfolizer.Horology;
+using System;
 using System.Linq;
 
 namespace SqlBatchInsertPerformance
@@ -14,15 +15,19 @@ namespace SqlBatchInsertPerformance
         static void Main()
         {
             BenchmarkRunner.Run<BatchInsert>(
+#if DEBUG
+                new DebugInProcessConfig()
+#else
                 DefaultConfig.Instance
-                    .AddJob(Job.ShortRun)
+#endif
+                    .AddJob(Job.Dry)
 
                     .AddColumn(new CalculateColumn("Throughput [params/s]"
                         , (summary, benchmarkCase) =>
                         {
                             var rps = (int)benchmarkCase.Parameters["rowsPerStatement"];
                             var cpr = (int)benchmarkCase.Parameters["columnsPerRow"];
-                            var br = summary.Reports.First(br => br.BenchmarkCase == benchmarkCase);
+                            var br = summary.Reports.First(brep => brep.BenchmarkCase == benchmarkCase);
                             var time = br.ResultStatistics.Mean;
                             var nos = (int)(benchmarkCase.Parameters["numberOfStatements"]);
                             var tp = rps * cpr * nos / time * 1_000_000_000;
@@ -32,7 +37,7 @@ namespace SqlBatchInsertPerformance
                         , (summary, benchmarkCase) =>
                         {
                             var rps = (int)benchmarkCase.Parameters["rowsPerStatement"];
-                            var br = summary.Reports.First(br => br.BenchmarkCase == benchmarkCase);
+                            var br = summary.Reports.First(brep => brep.BenchmarkCase == benchmarkCase);
                             var time = br.ResultStatistics.Mean;
                             var nos = (int)(benchmarkCase.Parameters["numberOfStatements"]);
                             var tp = rps * nos / time * 1_000_000_000;

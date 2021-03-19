@@ -5,6 +5,7 @@ using System.Linq;
 using System.Data;
 using System.Data.Common;
 using System.Text;
+using System;
 
 namespace SqlBatchInsertPerformance
 {
@@ -35,35 +36,37 @@ namespace SqlBatchInsertPerformance
                     .Append(") VALUES ")
                     .Append(string.Join(",", Enumerable.Range(0, RowsPerStatement).Select(
                         r => "(" + string.Join(",", Enumerable.Range(0, ColumnsPerRow)
-                            .Select(c => providerAsync == ProviderAsync.OdbcSync ? "?" : GetParameterName(r, c))) + ")"
+                            .Select(c => providerAsync == ProviderAsync.OdbcSync ? "?" : GetParameterName(r, c, columnsPerRow))) + ")"
                         )));
                 InsertQuery = insertRows.ToString();
                 //Console.WriteLine("Insert rows: " + Query);
             }
 
-            public IDbConnection GetConnection() =>
-                ProviderAsync == ProviderAsync.OdbcSync
+            public IDbConnection GetConnection()
+            {
+                return ProviderAsync == ProviderAsync.OdbcSync
                     ? new O.OdbcConnection(_odbcCS)
                     : ProviderAsync == ProviderAsync.SystemSync
-                        ? new S.SqlConnection(_sqlClientCS) : new M.SqlConnection(_sqlClientCS);
+                    ? new S.SqlConnection(_sqlClientCS) : (IDbConnection)new M.SqlConnection(_sqlClientCS);
+            }
 
             public IDbCommand GetCommand(string query, IDbConnection connection) =>
                 ProviderAsync == ProviderAsync.OdbcSync
                     ? new O.OdbcCommand(query, (O.OdbcConnection)connection)
                     : ProviderAsync == ProviderAsync.SystemSync
                         ? new S.SqlCommand(query, (S.SqlConnection)connection)
-                        : new M.SqlCommand(query, (M.SqlConnection)connection);
+                        : (IDbCommand)new M.SqlCommand(query, (M.SqlConnection)connection);
 
             public DbParameter GetParameter(string parameterName) =>
                 ProviderAsync == ProviderAsync.OdbcSync
                     ? new O.OdbcParameter(parameterName, O.OdbcType.Int)
                     : ProviderAsync == ProviderAsync.SystemSync
                         ? new S.SqlParameter(parameterName, SqlDbType.Int)
-                        : new M.SqlParameter(parameterName, SqlDbType.Int);
+                        : (DbParameter)new M.SqlParameter(parameterName, SqlDbType.Int);
 
             public void SetupTable()
             {
-                ExecuteNonQuery("DROP TABLE IF EXISTS " + TableName);
+                DropTableIfExists();
 
                 var createTable = $"CREATE TABLE {TableName} ("
                     + string.Join(", ", Enumerable.Range(0, ColumnsPerRow).Select(c => $"d{c} int"))
@@ -72,17 +75,28 @@ namespace SqlBatchInsertPerformance
                 ExecuteNonQuery(createTable);
             }
 
+            private void DropTableIfExists()
+            {
+                // Newer databases can use: "DROP TABLE IF EXISTS " + TableName
+                ExecuteNonQuery($@"IF OBJECT_ID('{TableName}', 'TABLE') IS NOT NULL DROP TABLE {TableName}");
+            }
+
             public void Cleanup()
             {
-                ExecuteNonQuery("DROP TABLE IF EXISTS " + TableName);
+                DropTableIfExists();
             }
 
             public void ExecuteNonQuery(string query)
             {
-                using var conn = GetConnection();
-                using var cmd = GetCommand(query, conn);
-                conn.Open();
-                cmd.ExecuteNonQuery();
+                //Console.WriteLine("Executing query: " + query);
+                using (var conn = GetConnection())
+                {
+                    using (var cmd = GetCommand(query, conn))
+                    {
+                        conn.Open();
+                        cmd.ExecuteNonQuery();
+                    }
+                }
             }
 
             public override string ToString() => "";
